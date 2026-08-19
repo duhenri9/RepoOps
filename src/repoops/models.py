@@ -114,6 +114,8 @@ class VerificationReceipt:
     base_head: str
     changed_paths: tuple[str, ...]
     worktree_diff_sha256: str
+    post_worktree_diff_sha256: str
+    worktree_unchanged: bool
     preconditions: tuple[CheckEvidence, ...]
     commands: tuple[CommandEvidence, ...]
     claim_boundary: str
