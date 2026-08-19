@@ -22,6 +22,7 @@ class CommandOutcome(StrEnum):
     FAIL = "FAIL"
     TIMEOUT = "TIMEOUT"
     REJECTED = "REJECTED"
+    ERROR = "ERROR"
 
 
 class VerificationOutcome(StrEnum):
@@ -111,6 +112,9 @@ class VerificationReceipt:
     request_id: str
     outcome: VerificationOutcome
     base_head: str
+    changed_paths: tuple[str, ...]
+    worktree_diff_sha256: str
+    preconditions: tuple[CheckEvidence, ...]
     commands: tuple[CommandEvidence, ...]
     claim_boundary: str
     receipt_sha256: str
