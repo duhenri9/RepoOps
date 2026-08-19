@@ -1,0 +1,24 @@
+{
+  "request_id": "WO-NEG-002",
+  "repository": {
+    "src/service.py": "def greet():\n    return 'changed elsewhere'\n"
+  },
+  "contract": {
+    "allowed_paths": ["src/service.py"],
+    "required_checks": [
+      {
+        "name": "requested-behaviour-visible",
+        "kind": "contains",
+        "path": "src/service.py",
+        "value": "hello, evidence"
+      }
+    ]
+  },
+  "operations": [
+    {
+      "path": "src/service.py",
+      "expected_before": "def greet():\n    return 'hello'\n",
+      "replacement": "def greet():\n    return 'hello, evidence'\n"
+    }
+  ]
+}
