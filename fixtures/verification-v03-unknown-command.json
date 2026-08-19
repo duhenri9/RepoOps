@@ -1,0 +1,4 @@
+{
+  "request_id": "VERIFY-UNKNOWN-001",
+  "commands": ["shell.arbitrary"]
+}
