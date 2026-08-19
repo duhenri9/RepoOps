@@ -1,0 +1,9 @@
+{
+  "request_id": "VERIFY-DEFAULT-001",
+  "commands": [
+    "repoops.pytest",
+    "repoops.ruff-check",
+    "repoops.ruff-format-check",
+    "repoops.mypy"
+  ]
+}
