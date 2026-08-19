@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -167,9 +167,48 @@ jobs:
           assert "VALUE = 'new'" in payload["unified_diff"]
           PY
 
+      - name: Prove verification policy V0.3 default registry
+        run: |
+          repoops-verify . fixtures/verification-v03-default.json --out artifacts/verification-v03-default.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("artifacts/verification-v03-default.json").read_text())
+          assert payload["outcome"] == "VERIFIED"
+          assert payload["worktree_unchanged"] is True
+          assert payload["worktree_diff_sha256"] == payload["post_worktree_diff_sha256"]
+          assert [item["command_id"] for item in payload["commands"]] == [
+              "repoops.pytest",
+              "repoops.ruff-check",
+              "repoops.ruff-format-check",
+              "repoops.mypy",
+          ]
+          assert all(item["outcome"] == "PASS" for item in payload["commands"])
+          assert all(item["definition_sha256"] for item in payload["commands"])
+          assert all(item["stdout_sha256"] for item in payload["commands"])
+          PY
+
+      - name: Prove verification policy V0.3 disallowed command
+        run: |
+          set +e
+          repoops-verify . fixtures/verification-v03-unknown-command.json --out artifacts/verification-v03-unknown.json
+          status=$?
+          set -e
+          test "$status" -eq 2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("artifacts/verification-v03-unknown.json").read_text())
+          assert payload["outcome"] == "FAILED"
+          assert payload["commands"][0]["outcome"] == "REJECTED"
+          assert payload["commands"][0]["exit_code"] is None
+          assert "not allowed by policy" in payload["commands"][0]["stderr_preview"]
+          assert payload["worktree_unchanged"] is True
+          PY
+
       - name: Upload receipts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: repoops-v02-evidence
+          name: repoops-v03-evidence
           path: artifacts/*.json
           if-no-files-found: error
