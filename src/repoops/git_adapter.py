@@ -25,7 +25,6 @@ GIT_CLAIM_BOUNDARY = (
     "not commit, push, authenticate remote authority, run arbitrary verification commands or "
     "certify repository-wide correctness."
 )
-_EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 
 
 class GitAdapterError(RuntimeError):
@@ -51,8 +50,7 @@ def _run_git(
         cwd=root,
         env=dict(env) if env is not None else None,
         check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     if completed.returncode != 0:
@@ -72,8 +70,7 @@ def _run_git_bytes(
         cwd=root,
         env=dict(env),
         check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     if completed.returncode != 0:
         detail = completed.stderr.decode(errors="replace").strip() or "git command failed"
@@ -365,7 +362,9 @@ def execute_git_plan(repository: Path, plan: Mapping[str, Any]) -> GitReceipt:
             continue
         overlap = touched & operation_paths
         if overlap:
-            contract_violations.append("overlapping operation path(s): " + ", ".join(sorted(overlap)))
+            contract_violations.append(
+                "overlapping operation path(s): " + ", ".join(sorted(overlap))
+            )
             continue
         touched.update(operation_paths)
         operations.append(operation)
