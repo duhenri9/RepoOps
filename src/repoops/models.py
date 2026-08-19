@@ -15,6 +15,23 @@ class Outcome(StrEnum):
     INDETERMINATE = "INDETERMINATE"
 
 
+class CommandOutcome(StrEnum):
+    """Execution state for one policy-approved verification command."""
+
+    PASS = "PASS"
+    FAIL = "FAIL"
+    TIMEOUT = "TIMEOUT"
+    REJECTED = "REJECTED"
+
+
+class VerificationOutcome(StrEnum):
+    """Aggregate verification state; this is evidence, not delivery acceptance."""
+
+    VERIFIED = "VERIFIED"
+    FAILED = "FAILED"
+    INDETERMINATE = "INDETERMINATE"
+
+
 @dataclass(frozen=True)
 class CheckEvidence:
     name: str
@@ -62,4 +79,45 @@ class GitReceipt:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["outcome"] = self.outcome.value
+        return payload
+
+
+@dataclass(frozen=True)
+class CommandEvidence:
+    """Bounded evidence for one command definition resolved from a registry."""
+
+    command_id: str
+    definition_version: str
+    definition_sha256: str
+    outcome: CommandOutcome
+    argv: tuple[str, ...]
+    timeout_seconds: float
+    exit_code: int | None
+    stdout_preview: str
+    stderr_preview: str
+    stdout_sha256: str
+    stderr_sha256: str
+    stdout_truncated: bool
+    stderr_truncated: bool
+    environment: tuple[tuple[str, str], ...]
+    evidence_sha256: str
+
+
+@dataclass(frozen=True)
+class VerificationReceipt:
+    """Aggregate command evidence that deliberately does not claim delivery acceptance."""
+
+    schema: str
+    request_id: str
+    outcome: VerificationOutcome
+    base_head: str
+    commands: tuple[CommandEvidence, ...]
+    claim_boundary: str
+    receipt_sha256: str
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["outcome"] = self.outcome.value
+        for command in payload["commands"]:
+            command["outcome"] = command["outcome"].value
         return payload
