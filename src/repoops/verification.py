@@ -440,8 +440,10 @@ def execute_verification_plan(
         )
 
     raw_commands = plan.get("commands")
-    if not isinstance(raw_commands, list) or not raw_commands or not all(
-        isinstance(item, str) and item for item in raw_commands
+    if (
+        not isinstance(raw_commands, list)
+        or not raw_commands
+        or not all(isinstance(item, str) and item for item in raw_commands)
     ):
         preconditions.append(
             CheckEvidence(
