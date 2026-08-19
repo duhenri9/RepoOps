@@ -1,0 +1,31 @@
+{
+  "request_id": "WO-001",
+  "repository": {
+    "src/service.py": "def greet():\n    return 'hello'\n",
+    "README.md": "fixture repository\n"
+  },
+  "contract": {
+    "allowed_paths": ["src/service.py"],
+    "required_checks": [
+      {
+        "name": "requested-behaviour-visible",
+        "kind": "contains",
+        "path": "src/service.py",
+        "value": "hello, evidence"
+      },
+      {
+        "name": "no-placeholder-left",
+        "kind": "not_contains",
+        "path": "src/service.py",
+        "value": "TODO"
+      }
+    ]
+  },
+  "operations": [
+    {
+      "path": "src/service.py",
+      "expected_before": "def greet():\n    return 'hello'\n",
+      "replacement": "def greet():\n    return 'hello, evidence'\n"
+    }
+  ]
+}
