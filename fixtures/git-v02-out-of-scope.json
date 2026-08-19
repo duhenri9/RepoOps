@@ -1,0 +1,12 @@
+{
+  "request_id": "GIT-REJECT-SCOPE-001",
+  "allowed_paths": ["src/service.py"],
+  "operations": [
+    {
+      "kind": "delete",
+      "path": "docs/obsolete.md",
+      "expected_before": "obsolete\n"
+    }
+  ],
+  "required_checks": []
+}
