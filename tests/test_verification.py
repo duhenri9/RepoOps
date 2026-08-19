@@ -260,5 +260,7 @@ def test_stale_worktree_identity_blocks_command_execution(tmp_path: Path) -> Non
 
     assert receipt.outcome is VerificationOutcome.INDETERMINATE
     assert not receipt.commands
-    assert any(check.name == "expected-base-head" and not check.passed for check in receipt.preconditions)
+    assert any(
+        check.name == "expected-base-head" and not check.passed for check in receipt.preconditions
+    )
     assert not marker.exists()
