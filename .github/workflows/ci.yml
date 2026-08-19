@@ -10,8 +10,8 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -27,25 +27,30 @@ jobs:
       - name: Install
         run: python -m pip install -e ".[dev]"
 
+      - name: Tool identities
+        run: |
+          python --version
+          git --version
+
       - name: Compile
-        run: python -m compileall src
+        run: python -m compileall src tools
 
       - name: Test
         run: python -m pytest -q
 
       - name: Ruff lint
-        run: python -m ruff check src tests
+        run: python -m ruff check src tests tools
 
       - name: Ruff format
-        run: python -m ruff format --check src tests
+        run: python -m ruff format --check src tests tools
 
       - name: Mypy
         run: python -m mypy src
 
-      - name: Prove accepted control
+      - name: Prove V0 accepted control
         run: repoops fixtures/accepted.json --out artifacts/accepted.json
 
-      - name: Prove rejected out-of-scope control
+      - name: Prove V0 rejected out-of-scope control
         run: |
           set +e
           repoops fixtures/rejected-out-of-scope.json --out artifacts/rejected.json
@@ -60,7 +65,7 @@ jobs:
           assert payload["scope_violations"] == [".github/workflows/ci.yml"]
           PY
 
-      - name: Prove indeterminate stale-state control
+      - name: Prove V0 indeterminate stale-state control
         run: |
           set +e
           repoops fixtures/indeterminate-stale-state.json --out artifacts/indeterminate.json
@@ -74,9 +79,97 @@ jobs:
           assert payload["outcome"] == "INDETERMINATE"
           PY
 
+      - name: Prove Git V0.2 replace/delete/rename/binary control
+        run: |
+          rm -rf /tmp/repoops-git-accepted
+          python tools/create_git_fixture_repo.py /tmp/repoops-git-accepted
+          repoops-git /tmp/repoops-git-accepted fixtures/git-v02-accepted.json --out artifacts/git-v02-accepted.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("artifacts/git-v02-accepted.json").read_text())
+          assert payload["outcome"] == "ACCEPTED"
+          assert payload["dirty_before"] == []
+          assert payload["scope_violations"] == []
+          assert payload["unified_diff"]
+          assert "assets/blob.bin" in payload["changed_paths"]
+          assert "assets/blob-renamed.bin" in payload["changed_paths"]
+          assert "docs/obsolete.md" in payload["changed_paths"]
+          assert payload["worktree_restored"] is False
+          PY
+
+      - name: Prove Git V0.2 dirty-tree fail-closed control
+        run: |
+          rm -rf /tmp/repoops-git-dirty
+          python tools/create_git_fixture_repo.py /tmp/repoops-git-dirty
+          printf 'dirty\n' > /tmp/repoops-git-dirty/README.md
+          set +e
+          repoops-git /tmp/repoops-git-dirty fixtures/git-v02-accepted.json --out artifacts/git-v02-dirty.json
+          status=$?
+          set -e
+          test "$status" -eq 2
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("artifacts/git-v02-dirty.json").read_text())
+          assert payload["outcome"] == "INDETERMINATE"
+          assert payload["dirty_before"]
+          assert payload["changed_paths"] == []
+          PY
+
+      - name: Prove Git V0.2 out-of-scope and path-escape controls
+        run: |
+          rm -rf /tmp/repoops-git-scope /tmp/repoops-git-escape
+          python tools/create_git_fixture_repo.py /tmp/repoops-git-scope
+          set +e
+          repoops-git /tmp/repoops-git-scope fixtures/git-v02-out-of-scope.json --out artifacts/git-v02-scope.json
+          scope_status=$?
+          set -e
+          test "$scope_status" -eq 2
+          test -z "$(git -C /tmp/repoops-git-scope status --porcelain=v1)"
+
+          python tools/create_git_fixture_repo.py /tmp/repoops-git-escape
+          printf 'outside\n' > /tmp/outside.txt
+          set +e
+          repoops-git /tmp/repoops-git-escape fixtures/git-v02-path-escape.json --out artifacts/git-v02-escape.json
+          escape_status=$?
+          set -e
+          test "$escape_status" -eq 2
+          test "$(cat /tmp/outside.txt)" = "outside"
+          test -z "$(git -C /tmp/repoops-git-escape status --porcelain=v1)"
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          scope = json.loads(Path("artifacts/git-v02-scope.json").read_text())
+          escape = json.loads(Path("artifacts/git-v02-escape.json").read_text())
+          assert scope["outcome"] == "REJECTED"
+          assert scope["scope_violations"] == ["docs/obsolete.md"]
+          assert escape["outcome"] == "REJECTED"
+          PY
+
+      - name: Prove Git V0.2 failed-check rollback control
+        run: |
+          rm -rf /tmp/repoops-git-rollback
+          python tools/create_git_fixture_repo.py /tmp/repoops-git-rollback
+          set +e
+          repoops-git /tmp/repoops-git-rollback fixtures/git-v02-postcheck-fail.json --out artifacts/git-v02-rollback.json
+          status=$?
+          set -e
+          test "$status" -eq 2
+          test -z "$(git -C /tmp/repoops-git-rollback status --porcelain=v1)"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("artifacts/git-v02-rollback.json").read_text())
+          assert payload["outcome"] == "REJECTED"
+          assert payload["worktree_restored"] is True
+          assert "VALUE = 'new'" in payload["unified_diff"]
+          PY
+
       - name: Upload receipts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: repoops-v0-evidence
-          path: artifacts/
+          name: repoops-v02-evidence
+          path: artifacts/*.json
           if-no-files-found: error

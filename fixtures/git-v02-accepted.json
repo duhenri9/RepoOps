@@ -1,0 +1,60 @@
+{
+  "request_id": "GIT-ACCEPTED-001",
+  "allowed_paths": [
+    "src/service.py",
+    "docs/obsolete.md",
+    "docs/guide-old.md",
+    "docs/guide.md",
+    "assets/blob.bin",
+    "assets/blob-renamed.bin"
+  ],
+  "operations": [
+    {
+      "kind": "replace",
+      "path": "src/service.py",
+      "expected_before": "VALUE = 'old'\n",
+      "replacement": "VALUE = 'new'\n"
+    },
+    {
+      "kind": "delete",
+      "path": "docs/obsolete.md",
+      "expected_before": "obsolete\n"
+    },
+    {
+      "kind": "rename",
+      "path": "docs/guide-old.md",
+      "destination": "docs/guide.md",
+      "expected_before": "guide\n"
+    },
+    {
+      "kind": "rename",
+      "path": "assets/blob.bin",
+      "destination": "assets/blob-renamed.bin",
+      "expected_before_sha256": "2f87beacb6a71f75e3243ce005faf5d99405e02b5e729c7c9c216ef2e2a0544a"
+    }
+  ],
+  "required_checks": [
+    {
+      "name": "service-updated",
+      "kind": "equals",
+      "path": "src/service.py",
+      "value": "VALUE = 'new'\n"
+    },
+    {
+      "name": "obsolete-removed",
+      "kind": "absent",
+      "path": "docs/obsolete.md"
+    },
+    {
+      "name": "guide-renamed",
+      "kind": "exists",
+      "path": "docs/guide.md"
+    },
+    {
+      "name": "binary-preserved",
+      "kind": "sha256",
+      "path": "assets/blob-renamed.bin",
+      "value": "2f87beacb6a71f75e3243ce005faf5d99405e02b5e729c7c9c216ef2e2a0544a"
+    }
+  ]
+}

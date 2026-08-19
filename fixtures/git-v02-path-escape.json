@@ -1,0 +1,13 @@
+{
+  "request_id": "GIT-REJECT-ESCAPE-001",
+  "allowed_paths": ["../outside.txt"],
+  "operations": [
+    {
+      "kind": "replace",
+      "path": "../outside.txt",
+      "expected_before": "outside\n",
+      "replacement": "escaped\n"
+    }
+  ],
+  "required_checks": []
+}
