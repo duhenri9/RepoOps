@@ -1,0 +1,20 @@
+{
+  "request_id": "GIT-ROLLBACK-001",
+  "allowed_paths": ["src/service.py"],
+  "operations": [
+    {
+      "kind": "replace",
+      "path": "src/service.py",
+      "expected_before": "VALUE = 'old'\n",
+      "replacement": "VALUE = 'new'\n"
+    }
+  ],
+  "required_checks": [
+    {
+      "name": "deliberately-wrong",
+      "kind": "contains",
+      "path": "src/service.py",
+      "value": "never-present"
+    }
+  ]
+}
