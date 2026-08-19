@@ -15,14 +15,14 @@ acceptance contract
     ↓
 bounded mutation adapter
     ↓
-independent scope + freshness + behavioural evidence
+policy-bounded verification evidence
     ↓
-evidence receipt
+independent acceptance
     ↓
 ACCEPTED | REJECTED | INDETERMINATE
 ```
 
-Planning, mutation, verification and acceptance are deliberately separate responsibilities. Git, GitHub or a model can provide inputs or mechanisms; none of them silently owns the completion claim.
+Planning, mutation, verification and acceptance are deliberately separate responsibilities. Git, a verification process, GitHub or a model can provide inputs or mechanisms; none of them silently owns the completion claim.
 
 ## V0 — deterministic evidence runtime
 
@@ -68,43 +68,88 @@ It adds executable evidence for:
 repoops-git /path/to/local/repository fixtures/git-v02-accepted.json --out receipt.json
 ```
 
-### V0.2 negative controls
-
-CI proves that:
-
-- a dirty worktree becomes `INDETERMINATE` before mutation;
-- an out-of-scope requested path is rejected before mutation;
-- `../` path escape cannot touch a file outside the repository;
-- stale expected-before identity becomes `INDETERMINATE`;
-- a deliberately failing post-change check returns `REJECTED` and restores the worktree;
-- rename/delete/binary edge cases remain inside the same evidence model.
-
 See [`docs/GIT_WORKTREE_V02.md`](docs/GIT_WORKTREE_V02.md).
+
+## V0.3 — policy-bounded verification commands
+
+V0.3 introduces process execution without turning RepoOps into an arbitrary shell agent.
+
+A request may select only stable IDs from a trusted command registry. The registry owns the exact executable/argv, timeout, output bound and environment allowlist.
+
+```text
+verification request
+        ↓
+trusted command ID registry
+        ↓
+exact argv, shell=False
+        ↓
+bounded stdout/stderr evidence
+        ↓
+pre/post Git-visible worktree identity
+        ↓
+VERIFIED | FAILED | INDETERMINATE
+```
+
+The default V0.3 registry contains only read-oriented self-verification commands for RepoOps:
+
+- `repoops.pytest`
+- `repoops.ruff-check`
+- `repoops.ruff-format-check`
+- `repoops.mypy`
+
+```bash
+repoops-verify . fixtures/verification-v03-default.json --out verification.json
+```
+
+V0.3 records:
+
+- command ID + definition version + definition SHA-256;
+- exact argv evidence;
+- timeout and exit outcome;
+- SHA-256 of complete captured stdout/stderr byte streams;
+- bounded output previews plus explicit truncation state;
+- allowlisted environment evidence with secret-like values redacted;
+- exact base `HEAD` and Git-visible changed paths;
+- pre/post unified worktree-diff SHA-256;
+- whether verification left Git-visible worktree state unchanged;
+- deterministic command/receipt identities where the underlying evidence is deterministic.
+
+### V0.3 adversarial controls
+
+The executable gate proves:
+
+- a deterministic allowed command can produce stable evidence on the same baseline;
+- non-zero exit becomes `FAIL`, never success;
+- an unknown/disallowed ID is rejected before process creation;
+- shell metacharacters remain literal argv data because no shell expansion is used;
+- timeout is explicit and aggregate verification becomes `INDETERMINATE`;
+- oversized output is preview-bounded while the complete captured stream still has a digest;
+- a token-like environment value can be consumed by the child without appearing raw in receipt/preview evidence;
+- a zero-exit command that changes Git-visible worktree state makes verification `INDETERMINATE`;
+- stale expected Git identity blocks command execution.
+
+See [`docs/VERIFICATION_POLICY_V03.md`](docs/VERIFICATION_POLICY_V03.md).
 
 ## Evidence model
 
-V0 emits `repoops.receipt.v0` for the synthetic runtime.
+RepoOps deliberately uses different evidence types for different authority surfaces:
 
-V0.2 emits `repoops.git-receipt.v0.2` with:
+- `repoops.receipt.v0` — synthetic bounded acceptance evidence;
+- `repoops.git-receipt.v0.2` — real local Git mutation/acceptance evidence;
+- `repoops.verification-receipt.v0.3` — policy-bounded command verification evidence.
 
-- request id and outcome;
-- exact base `HEAD`;
-- dirty-state evidence;
-- actual changed paths and scope violations;
-- independent check evidence;
-- complete unified diff + SHA-256;
-- rollback/restoration state;
-- explicit claim boundary;
-- deterministic receipt SHA-256.
+**`VERIFIED` is not `ACCEPTED`.** A command result can support acceptance; it does not own acceptance.
 
-Receipt digests identify the bounded evidence payload. They are not signatures and do not prove repository-wide correctness.
+Receipt digests identify bounded evidence payloads. They are not signatures and do not prove repository-wide correctness.
 
 ## What RepoOps still does not claim
 
-- arbitrary verification-command execution;
+- arbitrary user shell or request-supplied executables/argv;
+- process-tree sandboxing or daemon supervision;
+- package installation/network-capable commands in the default policy;
 - GitHub issue/PR mutation;
 - remote authority/authentication;
-- auto-merge;
+- auto-commit or auto-merge;
 - model planning quality;
 - autonomous software engineering;
 - production readiness;
@@ -118,6 +163,7 @@ Those surfaces require their own gates and negative controls.
 - Authority is explicit and scoped.
 - Planning, execution, verification and acceptance are separate responsibilities.
 - A model may recommend; it does not own acceptance.
+- A command may verify; it does not own acceptance.
 - Failure and indeterminate states are first-class outputs.
 - The core path runs without a paid model key.
 - New authority surfaces arrive only with executable adversarial controls.
@@ -133,13 +179,14 @@ python -m pytest -q
 python -m ruff check src tests tools
 python -m ruff format --check src tests tools
 python -m mypy src
+repoops-verify . fixtures/verification-v03-default.json
 ```
 
-CI executes both V0 and V0.2 positive/negative controls and uploads machine-readable receipts.
+CI executes V0, V0.2 and V0.3 positive/negative controls and uploads machine-readable receipts.
 
 ## Security
 
-See [`SECURITY.md`](SECURITY.md). V0.2 never executes request-supplied shell commands, commits, pushes or contacts a remote.
+See [`SECURITY.md`](SECURITY.md). V0.3 does not accept request-supplied shell commands and the default command policy contains no network/installation/privileged command surface.
 
 ## Contributing
 
