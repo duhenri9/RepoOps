@@ -16,7 +16,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repository", required=True, help="GitHub repository in owner/name form")
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--pr", type=int, help="Pull request number to observe")
-    target.add_argument("--refs", action="store_true", help="Observe explicit base/head branch refs")
+    target.add_argument(
+        "--refs",
+        action="store_true",
+        help="Observe explicit base/head branch refs",
+    )
     parser.add_argument("--base-ref", help="Base branch when --refs is used")
     parser.add_argument("--head-ref", help="Head branch when --refs is used")
     parser.add_argument("--issue", type=int, help="Optional issue/work-request identity")
