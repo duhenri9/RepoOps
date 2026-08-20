@@ -87,7 +87,7 @@ def _expect_dict(value: object, context: str) -> dict[str, Any]:
 def _expect_list(value: object, context: str) -> list[Any]:
     if not isinstance(value, list):
         raise GitHubApiError(f"{context} was not a JSON array")
-    return cast(list[Any], value)
+    return value
 
 
 def _required_str(payload: Mapping[str, Any], key: str) -> str:
