@@ -7,6 +7,10 @@ on:
 
 permissions:
   contents: read
+  checks: read
+  issues: read
+  pull-requests: read
+  statuses: read
 
 jobs:
   validate:
@@ -206,9 +210,37 @@ jobs:
           assert payload["worktree_unchanged"] is True
           PY
 
+      - name: Prove GitHub V0.4 live read-only identity
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY_ID: ${{ github.event.repository.id }}
+        run: |
+          repoops-github \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr "$PR_NUMBER" \
+            --expected-repository-id "$REPOSITORY_ID" \
+            --expected-head "$HEAD_SHA" \
+            --request-id github-v04-live \
+            --out artifacts/github-v04-live.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          payload = json.loads(Path("artifacts/github-v04-live.json").read_text())
+          assert payload["outcome"] == "COMPLETE"
+          assert payload["repository_full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert payload["repository_id"] == int(os.environ["REPOSITORY_ID"])
+          assert payload["head_sha"] == os.environ["HEAD_SHA"]
+          assert payload["stale"] is False
+          assert payload["pull_request_number"] == int(os.environ["PR_NUMBER"])
+          PY
+
       - name: Upload receipts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: repoops-v03-evidence
+          name: repoops-v04-evidence
           path: artifacts/*.json
           if-no-files-found: error
