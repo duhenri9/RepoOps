@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repoops"
-version = "0.3.0"
+version = "0.4.0"
 description = "Evidence-driven bounded repository maintenance runtime"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -23,6 +23,7 @@ dev = [
 repoops = "repoops.cli:main"
 repoops-git = "repoops.git_cli:main"
 repoops-verify = "repoops.verify_cli:main"
+repoops-github = "repoops.github_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

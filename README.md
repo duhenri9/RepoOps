@@ -17,12 +17,14 @@ bounded mutation adapter
     ↓
 policy-bounded verification evidence
     ↓
+GitHub read-only identity/evidence
+    ↓
 independent acceptance
     ↓
 ACCEPTED | REJECTED | INDETERMINATE
 ```
 
-Planning, mutation, verification and acceptance are deliberately separate responsibilities. Git, a verification process, GitHub or a model can provide inputs or mechanisms; none of them silently owns the completion claim.
+Planning, mutation, verification, remote evidence and acceptance are deliberately separate responsibilities. Git, a verification process, GitHub or a model can provide inputs or mechanisms; none of them silently owns the completion claim.
 
 ## V0 — deterministic evidence runtime
 
@@ -101,34 +103,58 @@ The default V0.3 registry contains only read-oriented self-verification commands
 repoops-verify . fixtures/verification-v03-default.json --out verification.json
 ```
 
-V0.3 records:
+V0.3 records command-definition identity, exact argv, timeout, exit outcome, complete stdout/stderr SHA-256 identities, bounded previews, allowlisted/redacted environment evidence and pre/post Git-visible worktree identity.
 
-- command ID + definition version + definition SHA-256;
-- exact argv evidence;
-- timeout and exit outcome;
-- SHA-256 of complete captured stdout/stderr byte streams;
-- bounded output previews plus explicit truncation state;
-- allowlisted environment evidence with secret-like values redacted;
-- exact base `HEAD` and Git-visible changed paths;
-- pre/post unified worktree-diff SHA-256;
-- whether verification left Git-visible worktree state unchanged;
-- deterministic command/receipt identities where the underlying evidence is deterministic.
-
-### V0.3 adversarial controls
-
-The executable gate proves:
-
-- a deterministic allowed command can produce stable evidence on the same baseline;
-- non-zero exit becomes `FAIL`, never success;
-- an unknown/disallowed ID is rejected before process creation;
-- shell metacharacters remain literal argv data because no shell expansion is used;
-- timeout is explicit and aggregate verification becomes `INDETERMINATE`;
-- oversized output is preview-bounded while the complete captured stream still has a digest;
-- a token-like environment value can be consumed by the child without appearing raw in receipt/preview evidence;
-- a zero-exit command that changes Git-visible worktree state makes verification `INDETERMINATE`;
-- stale expected Git identity blocks command execution.
+The adversarial gate proves non-zero exit, unknown command, literal shell metacharacters, timeout, large-output bounding, secret redaction, command side effects and stale Git identity.
 
 See [`docs/VERIFICATION_POLICY_V03.md`](docs/VERIFICATION_POLICY_V03.md).
+
+## V0.4 — read-only GitHub evidence adapter
+
+V0.4 adds remote repository evidence without granting RepoOps GitHub mutation authority.
+
+```text
+repository / PR / refs
+        ↓
+GET-only GitHub REST adapter
+        ↓
+repo ID + ref/PR identity
+changed-file identity
+check/status evidence
+        ↓
+final head recheck
+        ↓
+COMPLETE | INDETERMINATE
+        ↓
+separate acceptance authority
+```
+
+It records:
+
+- exact `owner/name` plus stable GitHub repository ID;
+- PR number/stable PR ID or explicit base/head refs;
+- resolved base/head commit SHAs;
+- optional issue/work-request identity;
+- changed paths plus a deterministic SHA-256 identity over bounded file metadata;
+- check runs and commit-status contexts without promoting failure/pending states;
+- optional required-check evidence;
+- explicit scope violations;
+- final stale-head/base recheck;
+- deterministic evidence receipt identity.
+
+`COMPLETE` means the declared observation completed. It **does not** mean `ACCEPTED`, correct or safe to merge. A failing check can be complete evidence; a missing required check or moved head becomes `INDETERMINATE`.
+
+```bash
+GITHUB_TOKEN=... repoops-github \
+  --repository owner/repo \
+  --pr 123 \
+  --expected-head <sha> \
+  --out github-evidence.json
+```
+
+The token is optional for public repositories, is never written to the receipt, and the production transport exposes GET only. CI runs a live read-only observation of its own PR using explicit read permissions and `persist-credentials: false`.
+
+See [`docs/GITHUB_EVIDENCE_V04.md`](docs/GITHUB_EVIDENCE_V04.md).
 
 ## Evidence model
 
@@ -136,9 +162,10 @@ RepoOps deliberately uses different evidence types for different authority surfa
 
 - `repoops.receipt.v0` — synthetic bounded acceptance evidence;
 - `repoops.git-receipt.v0.2` — real local Git mutation/acceptance evidence;
-- `repoops.verification-receipt.v0.3` — policy-bounded command verification evidence.
+- `repoops.verification-receipt.v0.3` — policy-bounded command verification evidence;
+- `repoops.github-evidence.v0.4` — read-only remote identity/check evidence.
 
-**`VERIFIED` is not `ACCEPTED`.** A command result can support acceptance; it does not own acceptance.
+**`VERIFIED` is not `ACCEPTED`, and `COMPLETE` is not `ACCEPTED`.** Evidence can support acceptance; it does not own acceptance.
 
 Receipt digests identify bounded evidence payloads. They are not signatures and do not prove repository-wide correctness.
 
@@ -146,9 +173,9 @@ Receipt digests identify bounded evidence payloads. They are not signatures and 
 
 - arbitrary user shell or request-supplied executables/argv;
 - process-tree sandboxing or daemon supervision;
-- package installation/network-capable commands in the default policy;
+- package installation/network-capable commands in the default verification policy;
 - GitHub issue/PR mutation;
-- remote authority/authentication;
+- remote approval authentication;
 - auto-commit or auto-merge;
 - model planning quality;
 - autonomous software engineering;
@@ -161,9 +188,10 @@ Those surfaces require their own gates and negative controls.
 
 - Evidence before completion claims.
 - Authority is explicit and scoped.
-- Planning, execution, verification and acceptance are separate responsibilities.
+- Planning, execution, verification, remote observation and acceptance are separate responsibilities.
 - A model may recommend; it does not own acceptance.
 - A command may verify; it does not own acceptance.
+- GitHub may report state; it does not own acceptance.
 - Failure and indeterminate states are first-class outputs.
 - The core path runs without a paid model key.
 - New authority surfaces arrive only with executable adversarial controls.
@@ -182,11 +210,11 @@ python -m mypy src
 repoops-verify . fixtures/verification-v03-default.json
 ```
 
-CI executes V0, V0.2 and V0.3 positive/negative controls and uploads machine-readable receipts.
+CI executes V0–V0.4 positive/negative controls, performs the live read-only GitHub identity probe on pull requests and uploads machine-readable receipts.
 
 ## Security
 
-See [`SECURITY.md`](SECURITY.md). V0.3 does not accept request-supplied shell commands and the default command policy contains no network/installation/privileged command surface.
+See [`SECURITY.md`](SECURITY.md). V0.4 does not expose a GitHub write transport. CI GitHub permissions are explicit read-only permissions.
 
 ## Contributing
 

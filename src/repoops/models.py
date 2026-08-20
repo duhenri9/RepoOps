@@ -33,6 +33,22 @@ class VerificationOutcome(StrEnum):
     INDETERMINATE = "INDETERMINATE"
 
 
+class GitHubEvidenceOutcome(StrEnum):
+    """Whether the declared GitHub observation was completed without stale/missing evidence."""
+
+    COMPLETE = "COMPLETE"
+    INDETERMINATE = "INDETERMINATE"
+
+
+class GitHubCheckState(StrEnum):
+    """Observed GitHub check/status state; it is not delivery acceptance."""
+
+    PASSING = "PASSING"
+    FAILING = "FAILING"
+    PENDING = "PENDING"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass(frozen=True)
 class CheckEvidence:
     name: str
@@ -126,4 +142,54 @@ class VerificationReceipt:
         payload["outcome"] = self.outcome.value
         for command in payload["commands"]:
             command["outcome"] = command["outcome"].value
+        return payload
+
+
+@dataclass(frozen=True)
+class GitHubCheckEvidence:
+    """One read-only check/status observation from GitHub."""
+
+    name: str
+    source: str
+    status: str
+    conclusion: str | None
+    details_url: str | None
+    state: GitHubCheckState
+    evidence_sha256: str
+
+
+@dataclass(frozen=True)
+class GitHubEvidenceReceipt:
+    """Read-only GitHub identity/evidence receipt; never a delivery-acceptance decision."""
+
+    schema: str
+    request_id: str
+    outcome: GitHubEvidenceOutcome
+    repository_full_name: str
+    repository_id: int | None
+    base_ref: str | None
+    base_sha: str | None
+    head_ref: str | None
+    head_sha: str | None
+    pull_request_number: int | None
+    pull_request_id: int | None
+    issue_number: int | None
+    issue_id: int | None
+    changed_paths: tuple[str, ...]
+    changed_files_sha256: str
+    checks: tuple[GitHubCheckEvidence, ...]
+    check_summary: GitHubCheckState
+    scope_violations: tuple[str, ...]
+    stale: bool
+    missing_evidence: tuple[str, ...]
+    errors: tuple[str, ...]
+    claim_boundary: str
+    receipt_sha256: str
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["outcome"] = self.outcome.value
+        payload["check_summary"] = self.check_summary.value
+        for check in payload["checks"]:
+            check["state"] = check["state"].value
         return payload
