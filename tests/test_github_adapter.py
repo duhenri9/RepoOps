@@ -219,7 +219,15 @@ def test_refs_mode_resolves_both_refs_and_compare_identity() -> None:
             }
         ]
     }
-    transport = FakeTransport(routes, {head_ref_path: [{"object": {"sha": HEAD}}, {"object": {"sha": HEAD}}]})
+    transport = FakeTransport(
+        routes,
+        {
+            head_ref_path: [
+                {"object": {"sha": HEAD}},
+                {"object": {"sha": HEAD}},
+            ]
+        },
+    )
     receipt = collect_github_evidence(
         plan(
             pull_request=None,
