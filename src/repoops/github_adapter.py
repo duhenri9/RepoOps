@@ -209,7 +209,9 @@ def _file_identity(files: list[dict[str, Any]]) -> tuple[tuple[str, ...], str]:
         if isinstance(previous, str) and previous:
             paths.add(previous)
         patch = item.get("patch")
-        patch_sha256 = hashlib.sha256(patch.encode()).hexdigest() if isinstance(patch, str) else None
+        patch_sha256 = (
+            hashlib.sha256(patch.encode()).hexdigest() if isinstance(patch, str) else None
+        )
         identities.append(
             {
                 "filename": filename,
@@ -415,7 +417,8 @@ def collect_github_evidence(
         repository_id = _integer(repo_payload, "id", "repository")
         if observed_full_name != repository:
             errors.append(
-                f"repository identity mismatch: requested {repository}, observed {observed_full_name}"
+                "repository identity mismatch: "
+                f"requested {repository}, observed {observed_full_name}"
             )
         if expected_repository_id is not None and repository_id != expected_repository_id:
             errors.append(
@@ -462,7 +465,8 @@ def collect_github_evidence(
             observed_issue_number = _integer(issue_payload, "number", "issue")
             if observed_issue_number != issue_number:
                 errors.append(
-                    f"issue identity mismatch: expected {issue_number}, observed {observed_issue_number}"
+                    "issue identity mismatch: "
+                    f"expected {issue_number}, observed {observed_issue_number}"
                 )
 
         if head_sha is None:
