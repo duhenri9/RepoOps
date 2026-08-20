@@ -56,9 +56,7 @@ class GitHubClient:
         }
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        request = urllib.request.Request(
-            f"{self._base_url}{path}", headers=headers, method="GET"
-        )
+        request = urllib.request.Request(f"{self._base_url}{path}", headers=headers, method="GET")
         try:
             with urllib.request.urlopen(request, timeout=self._timeout_seconds) as response:
                 data = response.read()
