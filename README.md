@@ -6,6 +6,26 @@ RepoOps is an open-source engineering project built around a strict idea:
 
 > a system that changes code must not be allowed to certify its own success without independent evidence.
 
+
+## 60–90 second review
+
+**What this demonstrates:** bounded software-maintenance execution where planning, mutation, verification, remote observation and acceptance are deliberately separate authorities.
+
+**Why it is technically interesting:** RepoOps combines allowed-path enforcement, stale-state detection, optimistic evidence identities, rollback on failed acceptance, a policy-bounded command registry and a read-only GitHub evidence adapter without turning shell commands, GitHub or a model into the final acceptance authority.
+
+**Fast local proof:**
+
+~~~bash
+python -m pip install -e ".[dev]"
+repoops fixtures/accepted.json
+repoops fixtures/rejected-out-of-scope.json
+repoops fixtures/indeterminate-stale-state.json
+~~~
+
+**Reviewer path:** run the three deterministic controls above, then inspect [ARCHITECTURE](docs/ARCHITECTURE.md), the [Git worktree adapter](docs/GIT_WORKTREE_V02.md), [verification policy](docs/VERIFICATION_POLICY_V03.md), the [GitHub evidence adapter](docs/GITHUB_EVIDENCE_V04.md) and CI.
+
+**Evidence boundary:** VERIFIED is not ACCEPTED, and COMPLETE is not ACCEPTED. The repository demonstrates bounded mechanisms and negative controls; it does not claim autonomous software engineering or repository-wide correctness.
+
 ## Architecture
 
 ```text
